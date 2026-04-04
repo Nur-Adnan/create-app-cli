@@ -11,7 +11,6 @@ import {
   logWarning,
 } from '../utils/logger';
 import { ResolvedConfig } from './resolver';
-import { runPostProcessing } from './postprocessor';
 
 /**
  * Validates that a template directory exists and contains required files.
@@ -78,17 +77,8 @@ export async function generateProject(config: ResolvedConfig): Promise<void> {
     }
   }
 
-  // Step 2: Post-process (frontend projects only)
-  if (config.projectType === 'frontend') {
-    stepHeader(2, 'Enhancing project structure');
-    await runPostProcessing(config);
-  }
-
-  // Step 3: Install dependencies
-  // For delegate (frontend): official CLI already installed base deps, but we re-run
-  // after post-processing so Tailwind and any injected deps are picked up.
-  // For template: first and only install run.
-  stepHeader(3, 'Installing dependencies');
+  // Step 2: Install dependencies
+  stepHeader(2, 'Installing dependencies');
   const installSpinner = createSpinner('Installing...');
   installSpinner.start();
   try {
@@ -101,8 +91,8 @@ export async function generateProject(config: ResolvedConfig): Promise<void> {
     );
   }
 
-  // Step 4: Initialize git repository
-  stepHeader(4, 'Initializing git repository');
+  // Step 3: Initialize git repository
+  stepHeader(3, 'Initializing git repository');
   const gitSpinner = createSpinner('Initializing git...');
   gitSpinner.start();
   try {

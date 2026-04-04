@@ -29,55 +29,37 @@ export function resolveConfig(answers: PromptAnswers): ResolvedConfig {
   const { projectType, framework, language, database, projectName, packageManager } = answers;
   const targetPath = path.join(process.cwd(), projectName);
 
-  // Frontend delegation
+  // Frontend templates
   if (projectType === 'frontend') {
     if (framework === 'react-vite') {
-      const resolvedPm = resolveAvailablePackageManager(packageManager);
-      const template = language === 'typescript' ? 'react-ts' : 'react';
+      const templateName = language === 'typescript' ? 'react-vite-ts' : 'react-vite-js';
       return {
-        type: 'delegate',
+        type: 'template',
         projectType,
         projectName,
-        packageManager: resolvedPm,
+        packageManager,
         framework,
         language,
         database,
         targetPath,
-        command: 'npm',
-        args: ['create', 'vite@latest', projectName, '--yes', '--', '--template', template],
+        templateName,
+        templatePath: path.join(__dirname, '..', '..', 'templates', templateName),
       };
     }
 
     if (framework === 'nextjs') {
-      const resolvedPm = resolveAvailablePackageManager(packageManager);
-
-      const args = [
-        'create-next-app@latest',
-        projectName,
-        language === 'typescript' ? '--typescript' : '--no-typescript',
-        '--eslint',
-        '--no-git',
-      ];
-
-      if (resolvedPm === 'yarn') {
-        args.push('--use-yarn');
-      } else if (resolvedPm === 'pnpm') {
-        args.push('--use-pnpm');
-      } else {
-        args.push('--use-npm');
-      }
-
+      const templateName = language === 'typescript' ? 'next-frontend-ts' : 'next-frontend-js';
       return {
-        type: 'delegate',
+        type: 'template',
         projectType,
         projectName,
-        packageManager: resolvedPm,
+        packageManager,
         framework,
         language,
         database,
         targetPath,
-        command: 'npx',
-        args,
+        templateName,
+        templatePath: path.join(__dirname, '..', '..', 'templates', templateName),
       };
     }
   }
