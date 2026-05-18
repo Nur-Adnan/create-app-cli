@@ -1,7 +1,7 @@
 import { Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { Todo } from '@/types/todo';
+import type { Todo } from '../types';
 
 interface Props {
   todo: Todo;

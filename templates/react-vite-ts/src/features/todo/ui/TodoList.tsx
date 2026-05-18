@@ -1,6 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useTodos } from '@/hooks/useTodos';
+import { Badge, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import { useTodos } from '@/features/todo/hooks';
 import { TodoForm } from './TodoForm';
 import { TodoItem } from './TodoItem';
 

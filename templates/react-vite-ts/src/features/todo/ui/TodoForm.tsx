@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState, type FormEvent } from 'react';
+import { Button, Input } from '@/components/ui';
 
 interface Props {
   onAdd: (title: string) => void;
@@ -9,7 +8,7 @@ interface Props {
 export function TodoForm({ onAdd }: Props) {
   const [value, setValue] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!value.trim()) return;
     onAdd(value.trim());
