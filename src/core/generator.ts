@@ -1,3 +1,4 @@
+// generator.ts — Executes the full scaffolding pipeline: scaffold → install → git → output
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -7,14 +8,15 @@ import { initGit } from '../utils/git';
 import {
   stepHeader,
   createSpinner,
-  displayNextSteps,
   logWarning,
+  logSuccess,
+  logInfo,
 } from '../utils/logger';
-import { ResolvedConfig } from './resolver';
+import type { ResolvedConfig } from './resolver';
 
 /**
  * Validates that a template directory exists and contains required files.
- * 
+ *
  * @param templatePath - Absolute path to the template directory
  * @throws Error if template directory or required files are missing
  */
@@ -46,28 +48,24 @@ async function validateTemplate(templatePath: string): Promise<void> {
 /**
  * Generates a project based on the resolved configuration.
  * Orchestrates the full scaffolding pipeline: scaffold → install → git → next steps.
- * 
+ *
  * @param config - Resolved configuration from resolver.ts
  */
 export async function generateProject(config: ResolvedConfig): Promise<void> {
   // Step 1: Scaffold
   stepHeader(1, 'Scaffolding project...');
-  
+
   if (config.type === 'delegate') {
     // Delegate to official CLI — subprocess uses stdio: inherit so output is visible directly
-    try {
-      await runOfficialCLI(config.command!, config.args!);
-    } catch (err) {
-      throw err;
-    }
-  } else if (config.type === 'template') {
+    await runOfficialCLI(config.command, config.args);
+  } else {
     // Copy internal template
     const spinner = createSpinner('Copying template...');
     spinner.start();
-    
+
     try {
-      await validateTemplate(config.templatePath!);
-      await copyTemplate(config.templatePath!, config.targetPath);
+      await validateTemplate(config.templatePath);
+      await copyTemplate(config.templatePath, config.targetPath);
       await replacePlaceholders(config.targetPath, config.projectName);
       await createEnvFile(config.targetPath);
       spinner.succeed('Template copied');
@@ -103,13 +101,37 @@ export async function generateProject(config: ResolvedConfig): Promise<void> {
     logWarning('Git initialization failed — you can run it manually');
   }
 
-  // Step 5: Display next steps
+  // Step 4: Display next steps
   displayNextSteps(config);
 }
 
 /**
+ * Prints post-scaffold instructions to the terminal.
+ *
+ * @param config - The resolved config containing project name, package manager, and framework
+ */
+function displayNextSteps(config: ResolvedConfig): void {
+  const { projectName, packageManager, framework } = config;
+
+  logSuccess(`Project "${projectName}" is ready!\n`);
+  logInfo('What to do next:\n');
+
+  // MERN has special instructions (server + client)
+  if (framework === 'mern') {
+    logInfo(`  cd ${projectName}/server && ${packageManager} run dev`);
+    logInfo(`  cd ${projectName}/client && ${packageManager} run dev`);
+  } else {
+    // All other project types: cd + run dev
+    logInfo(`  cd ${projectName}`);
+    logInfo(`  ${packageManager} run dev`);
+  }
+
+  logInfo('');
+}
+
+/**
  * Runs an official CLI command (create-vite, create-next-app) with stdio: inherit.
- * 
+ *
  * @param command - The command to run (e.g., 'npm', 'npx')
  * @param args - Command arguments
  * @returns Promise that resolves on exit code 0

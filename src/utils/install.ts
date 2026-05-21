@@ -1,27 +1,15 @@
-import { spawn, execSync } from 'child_process';
+import { spawn, execFileSync } from 'child_process';
 
 /**
  * Checks whether a package manager binary is available on PATH.
  */
 export function isPackageManagerAvailable(pm: string): boolean {
   try {
-    execSync(`${pm} --version`, { stdio: 'ignore' });
+    execFileSync(pm, ['--version'], { stdio: 'ignore' });
     return true;
   } catch {
     return false;
   }
-}
-
-/**
- * Returns the first available package manager from the preference list,
- * falling back to 'npm' which ships with Node.js.
- */
-export function resolveAvailablePackageManager(
-  preferred: 'npm' | 'yarn' | 'pnpm'
-): 'npm' | 'yarn' | 'pnpm' {
-  if (isPackageManagerAvailable(preferred)) return preferred;
-  // npm is always available with Node.js
-  return 'npm';
 }
 
 /**
@@ -37,20 +25,9 @@ export async function installDependencies(
   packageManager: 'npm' | 'yarn' | 'pnpm'
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Map package manager to install command
-    const commands: Record<'npm' | 'yarn' | 'pnpm', string> = {
-      npm: 'npm install',
-      yarn: 'yarn install',
-      pnpm: 'pnpm install',
-    };
-
-    const command = commands[packageManager];
-    const [cmd, ...args] = command.split(' ');
-
-    const child = spawn(cmd, args, {
+    const child = spawn(packageManager, ['install'], {
       cwd: targetPath,
       stdio: 'inherit',
-      shell: true,
     });
 
     child.on('exit', (code) => {

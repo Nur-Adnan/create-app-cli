@@ -42,7 +42,6 @@ describe('install module', () => {
       expect(mockSpawn).toHaveBeenCalledWith('npm', ['install'], {
         cwd: targetPath,
         stdio: 'inherit',
-        shell: true,
       });
     });
 
@@ -62,7 +61,6 @@ describe('install module', () => {
       expect(mockSpawn).toHaveBeenCalledWith('yarn', ['install'], {
         cwd: targetPath,
         stdio: 'inherit',
-        shell: true,
       });
     });
 
@@ -82,7 +80,6 @@ describe('install module', () => {
       expect(mockSpawn).toHaveBeenCalledWith('pnpm', ['install'], {
         cwd: targetPath,
         stdio: 'inherit',
-        shell: true,
       });
     });
 

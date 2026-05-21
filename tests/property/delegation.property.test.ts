@@ -1,3 +1,4 @@
+// delegation.property.test.ts — Property-based test: project name always appears in delegation args
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import { resolveConfig, type PromptAnswers } from '../../src/core/resolver.js';
@@ -32,8 +33,10 @@ describe('Delegation Args - Property-Based Tests', () => {
       projectType: fc.constant('frontend' as const),
       framework: frontendFrameworkArbitrary,
       language: languageArbitrary,
+      database: fc.constant('mongodb' as const),
       projectName: validProjectNameArbitrary,
       packageManager: packageManagerArbitrary,
+      targetPath: validProjectNameArbitrary.map(name => `/test/${name}`),
     });
 
     fc.assert(
@@ -43,13 +46,14 @@ describe('Delegation Args - Property-Based Tests', () => {
         // Assert that this is a delegation config
         expect(config.type).toBe('delegate');
         
-        // Assert that args array exists
-        expect(config.args).toBeDefined();
-        expect(Array.isArray(config.args)).toBe(true);
-        
-        // Assert that projectName appears somewhere in the args array
-        const projectNameInArgs = config.args!.some(arg => arg === answers.projectName);
-        expect(projectNameInArgs).toBe(true);
+        if (config.type === 'delegate') {
+          // Assert that args array exists and contains the project name
+          expect(config.args).toBeDefined();
+          expect(Array.isArray(config.args)).toBe(true);
+          
+          const projectNameInArgs = config.args.some(arg => arg === answers.projectName);
+          expect(projectNameInArgs).toBe(true);
+        }
       }),
       { numRuns: 20 }
     );

@@ -1,3 +1,4 @@
+// cli.ts — Main CLI orchestrator: chains prompts → resolver → generator
 import inquirer from 'inquirer';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -78,24 +79,27 @@ export async function createApp(): Promise<void> {
       },
     ]);
 
-    // Step 6: Merge all answers
+    // Compute target path (single source of truth — resolver no longer computes this)
+    const targetPath = path.join(process.cwd(), projectName);
+
+    // Step 5: Merge all answers
     const answers: PromptAnswers = {
       projectType,
-      framework: subAnswers.framework,
+      framework: subAnswers.framework as PromptAnswers['framework'],
       language: subAnswers.language,
       database,
       projectName,
       packageManager,
+      targetPath,
     };
 
-    // Warn if chosen package manager isn't installed
+    // Warn and fall back if chosen package manager isn't installed
     if (!isPackageManagerAvailable(packageManager)) {
       logWarning(`${packageManager} is not installed on this machine. Falling back to npm.`);
+      answers.packageManager = 'npm';
     }
 
     // Step 6: Check for directory collision
-    const targetPath = path.join(process.cwd(), answers.projectName);
-    
     try {
       await fs.access(targetPath);
       
@@ -129,8 +133,9 @@ export async function createApp(): Promise<void> {
 
     // Step 8: Generate project
     await generateProject(config);
-  } catch (err: any) {
-    logError(err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    logError(message);
     process.exit(1);
   }
 }

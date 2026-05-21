@@ -1,0 +1,59 @@
+# ci.yml — Continuous integration: typecheck → test → build → pack-verify
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Typecheck → Test → Build → Verify
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npm run build
+
+      - name: Smoke test — CJS load
+        run: node -e "require('./dist/index.js')" -- --help
+
+      - name: Smoke test — CLI help
+        run: node dist/index.js --help
+
+      - name: Pack verify
+        run: |
+          npm pack --dry-run 2>&1 | tee pack-output.txt
+          # Verify no .env files leaked
+          ! grep -q '\.env$' pack-output.txt || (echo "ERROR: .env file in pack output" && exit 1)
+          # Verify no src/ leaked
+          ! grep -q ' src/' pack-output.txt || (echo "ERROR: src/ in pack output" && exit 1)
+          # Verify no tests/ leaked
+          ! grep -q ' tests/' pack-output.txt || (echo "ERROR: tests/ in pack output" && exit 1)
+          # Verify no node_modules leaked
+          ! grep -q 'node_modules/' pack-output.txt || (echo "ERROR: node_modules/ in pack output" && exit 1)

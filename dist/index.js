@@ -29,7 +29,7 @@ var import_commander = require("commander");
 // src/cli.ts
 var import_inquirer5 = __toESM(require("inquirer"));
 var import_fs3 = require("fs");
-var path5 = __toESM(require("path"));
+var path4 = __toESM(require("path"));
 
 // src/prompts/main.prompt.ts
 var import_inquirer = __toESM(require("inquirer"));
@@ -39,6 +39,9 @@ var import_chalk = __toESM(require("chalk"));
 var import_ora = __toESM(require("ora"));
 function logInfo(message) {
   console.log(import_chalk.default.blue("\u2139 " + message));
+}
+function logSuccess(message) {
+  console.log(import_chalk.default.green("\u2714 " + message));
 }
 function logWarning(message) {
   console.log(import_chalk.default.yellow("\u26A0 " + message));
@@ -51,30 +54,6 @@ function stepHeader(n, message) {
 }
 function createSpinner(text) {
   return (0, import_ora.default)(text);
-}
-function stopSpinner(spinner, status, message) {
-  if (status === "succeed") {
-    spinner.succeed(message);
-  } else if (status === "fail") {
-    spinner.fail(message);
-  } else if (status === "warn") {
-    spinner.warn(message);
-  }
-}
-function displayNextSteps(config) {
-  const { projectName, packageManager, framework } = config;
-  console.log(import_chalk.default.bold.green(`
-\u2714  Project "${projectName}" is ready!
-`));
-  console.log(import_chalk.default.bold("What to do next:\n"));
-  if (framework === "mern") {
-    console.log(import_chalk.default.cyan(`  cd ${projectName}/server && ${packageManager} run dev`));
-    console.log(import_chalk.default.cyan(`  cd ${projectName}/client && ${packageManager} run dev`));
-  } else {
-    console.log(import_chalk.default.cyan(`  cd ${projectName}`));
-    console.log(import_chalk.default.cyan(`  ${packageManager} run dev`));
-  }
-  console.log();
 }
 
 // src/prompts/main.prompt.ts
@@ -199,61 +178,16 @@ function validateProjectName(name) {
 
 // src/core/resolver.ts
 var import_path = __toESM(require("path"));
-
-// src/utils/install.ts
-var import_child_process = require("child_process");
-function isPackageManagerAvailable(pm) {
-  try {
-    (0, import_child_process.execSync)(`${pm} --version`, { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
-}
-function resolveAvailablePackageManager(preferred) {
-  if (isPackageManagerAvailable(preferred)) return preferred;
-  return "npm";
-}
-async function installDependencies(targetPath, packageManager) {
-  return new Promise((resolve, reject) => {
-    const commands = {
-      npm: "npm install",
-      yarn: "yarn install",
-      pnpm: "pnpm install"
-    };
-    const command = commands[packageManager];
-    const [cmd, ...args] = command.split(" ");
-    const child = (0, import_child_process.spawn)(cmd, args, {
-      cwd: targetPath,
-      stdio: "inherit",
-      shell: true
-    });
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`${packageManager} install failed with exit code ${code}`));
-      }
-    });
-    child.on("error", (err) => {
-      reject(new Error(`Failed to spawn ${packageManager}: ${err.message}`));
-    });
-  });
-}
-
-// src/core/resolver.ts
 function resolveConfig(answers) {
-  const { projectType, framework, language, database, projectName, packageManager } = answers;
-  const targetPath = import_path.default.join(process.cwd(), projectName);
+  const { projectType, framework, language, database, projectName, packageManager, targetPath } = answers;
   if (projectType === "frontend") {
     if (framework === "react-vite") {
-      const resolvedPm = resolveAvailablePackageManager(packageManager);
       const template = language === "typescript" ? "react-ts" : "react";
       return {
         type: "delegate",
         projectType,
         projectName,
-        packageManager: resolvedPm,
+        packageManager,
         framework,
         language,
         database,
@@ -263,7 +197,6 @@ function resolveConfig(answers) {
       };
     }
     if (framework === "nextjs") {
-      const resolvedPm = resolveAvailablePackageManager(packageManager);
       const args = [
         "create-next-app@latest",
         projectName,
@@ -271,9 +204,9 @@ function resolveConfig(answers) {
         "--eslint",
         "--no-git"
       ];
-      if (resolvedPm === "yarn") {
+      if (packageManager === "yarn") {
         args.push("--use-yarn");
-      } else if (resolvedPm === "pnpm") {
+      } else if (packageManager === "pnpm") {
         args.push("--use-pnpm");
       } else {
         args.push("--use-npm");
@@ -282,7 +215,7 @@ function resolveConfig(answers) {
         type: "delegate",
         projectType,
         projectName,
-        packageManager: resolvedPm,
+        packageManager,
         framework,
         language,
         database,
@@ -343,22 +276,21 @@ function resolveConfig(answers) {
 }
 
 // src/core/generator.ts
-var import_child_process4 = require("child_process");
+var import_child_process3 = require("child_process");
 var import_fs2 = require("fs");
-var path4 = __toESM(require("path"));
+var path3 = __toESM(require("path"));
 
 // src/utils/copy.ts
 var import_fs = require("fs");
-var fsSync = __toESM(require("fs"));
 var path2 = __toESM(require("path"));
 async function copyTemplate(templatePath, targetPath) {
   await import_fs.promises.cp(templatePath, targetPath, { recursive: true });
 }
 async function replacePlaceholders(targetPath, projectName) {
-  const packageJsonPath = path2.join(targetPath, "package.json");
-  const packageJsonContent = await import_fs.promises.readFile(packageJsonPath, { encoding: "utf8" });
+  const packageJsonPath2 = path2.join(targetPath, "package.json");
+  const packageJsonContent = await import_fs.promises.readFile(packageJsonPath2, { encoding: "utf8" });
   const updatedPackageJson = packageJsonContent.replace(/PROJECT_NAME/g, projectName);
-  await import_fs.promises.writeFile(packageJsonPath, updatedPackageJson, { encoding: "utf8" });
+  await import_fs.promises.writeFile(packageJsonPath2, updatedPackageJson, { encoding: "utf8" });
   const readmePath = path2.join(targetPath, "README.md");
   const readmeContent = await import_fs.promises.readFile(readmePath, { encoding: "utf8" });
   const updatedReadme = readmeContent.replace(/PROJECT_NAME/g, projectName);
@@ -367,10 +299,41 @@ async function replacePlaceholders(targetPath, projectName) {
 async function createEnvFile(targetPath) {
   const envExamplePath = path2.join(targetPath, ".env.example");
   const envPath = path2.join(targetPath, ".env");
-  if (!fsSync.existsSync(envExamplePath)) {
+  try {
+    await import_fs.promises.access(envExamplePath);
+  } catch {
     return;
   }
   await import_fs.promises.copyFile(envExamplePath, envPath);
+}
+
+// src/utils/install.ts
+var import_child_process = require("child_process");
+function isPackageManagerAvailable(pm) {
+  try {
+    (0, import_child_process.execFileSync)(pm, ["--version"], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function installDependencies(targetPath, packageManager) {
+  return new Promise((resolve, reject) => {
+    const child = (0, import_child_process.spawn)(packageManager, ["install"], {
+      cwd: targetPath,
+      stdio: "inherit"
+    });
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${packageManager} install failed with exit code ${code}`));
+      }
+    });
+    child.on("error", (err) => {
+      reject(new Error(`Failed to spawn ${packageManager}: ${err.message}`));
+    });
+  });
 }
 
 // src/utils/git.ts
@@ -389,8 +352,7 @@ function runGitCommand(cmd, args, cwd, description) {
   return new Promise((resolve, reject) => {
     const child = (0, import_child_process2.spawn)(cmd, args, {
       cwd,
-      stdio: "pipe",
-      shell: true
+      stdio: "pipe"
     });
     let stderr = "";
     child.stderr?.on("data", (data) => {
@@ -409,601 +371,6 @@ function runGitCommand(cmd, args, cwd, description) {
   });
 }
 
-// src/core/postprocessor.ts
-var import_promises = __toESM(require("fs/promises"));
-var import_path2 = __toESM(require("path"));
-var import_child_process3 = require("child_process");
-
-// src/core/todoTemplates.ts
-function getTodoTypeContent(language) {
-  if (language === "typescript") {
-    return `export interface Todo {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-`;
-  }
-  return `/**
- * @typedef {Object} Todo
- * @property {string} id
- * @property {string} title
- * @property {boolean} completed
- */
-`;
-}
-function getUseTodosContent(language) {
-  if (language === "typescript") {
-    return `import { useState } from 'react';
-import { Todo } from '../types/todo';
-
-export function useTodos() {
-  const [todos, setTodos] = useState<Todo[]>([]);
-
-  const addTodo = (title: string) => {
-    if (!title.trim()) return;
-    setTodos(prev => [...prev, { id: Date.now().toString(), title: title.trim(), completed: false }]);
-  };
-
-  const toggleTodo = (id: string) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
-
-  const deleteTodo = (id: string) => {
-    setTodos(prev => prev.filter(t => t.id !== id));
-  };
-
-  return { todos, addTodo, toggleTodo, deleteTodo };
-}
-`;
-  }
-  return `import { useState } from 'react';
-
-export function useTodos() {
-  const [todos, setTodos] = useState([]);
-
-  /** @param {string} title */
-  const addTodo = (title) => {
-    if (!title.trim()) return;
-    setTodos(prev => [...prev, { id: Date.now().toString(), title: title.trim(), completed: false }]);
-  };
-
-  /** @param {string} id */
-  const toggleTodo = (id) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
-
-  /** @param {string} id */
-  const deleteTodo = (id) => {
-    setTodos(prev => prev.filter(t => t.id !== id));
-  };
-
-  return { todos, addTodo, toggleTodo, deleteTodo };
-}
-`;
-}
-function getTodoItemContent(language) {
-  if (language === "typescript") {
-    return `import { Todo } from '../../types/todo';
-
-interface Props {
-  todo: Todo;
-  onToggle: (id: string) => void;
-  onDelete: (id: string) => void;
-}
-
-export function TodoItem({ todo, onToggle, onDelete }: Props) {
-  return (
-    <div className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-100">
-      <input
-        type="checkbox"
-        checked={todo.completed}
-        onChange={() => onToggle(todo.id)}
-        className="w-4 h-4 accent-blue-500 cursor-pointer"
-      />
-      <span className={\`flex-1 text-gray-800 \${todo.completed ? 'line-through text-gray-400' : ''}\`}>
-        {todo.title}
-      </span>
-      <button
-        onClick={() => onDelete(todo.id)}
-        className="text-red-400 hover:text-red-600 text-sm font-medium transition-colors"
-      >
-        Delete
-      </button>
-    </div>
-  );
-}
-`;
-  }
-  return `/**
- * @param {{ todo: {id: string, title: string, completed: boolean}, onToggle: (id: string) => void, onDelete: (id: string) => void }} props
- */
-export function TodoItem({ todo, onToggle, onDelete }) {
-  return (
-    <div className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-100">
-      <input
-        type="checkbox"
-        checked={todo.completed}
-        onChange={() => onToggle(todo.id)}
-        className="w-4 h-4 accent-blue-500 cursor-pointer"
-      />
-      <span className={\`flex-1 text-gray-800 \${todo.completed ? 'line-through text-gray-400' : ''}\`}>
-        {todo.title}
-      </span>
-      <button
-        onClick={() => onDelete(todo.id)}
-        className="text-red-400 hover:text-red-600 text-sm font-medium transition-colors"
-      >
-        Delete
-      </button>
-    </div>
-  );
-}
-`;
-}
-function getTodoFormContent(language) {
-  if (language === "typescript") {
-    return `import { useState } from 'react';
-
-interface Props {
-  onAdd: (title: string) => void;
-}
-
-export function TodoForm({ onAdd }: Props) {
-  const [value, setValue] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onAdd(value);
-    setValue('');
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
-      <input
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        placeholder="Add a new task..."
-        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-      />
-      <button
-        type="submit"
-        className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-      >
-        Add
-      </button>
-    </form>
-  );
-}
-`;
-  }
-  return `import { useState } from 'react';
-
-/** @param {{ onAdd: (title: string) => void }} props */
-export function TodoForm({ onAdd }) {
-  const [value, setValue] = useState('');
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onAdd(value);
-    setValue('');
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
-      <input
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        placeholder="Add a new task..."
-        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-      />
-      <button
-        type="submit"
-        className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-      >
-        Add
-      </button>
-    </form>
-  );
-}
-`;
-}
-function getTodoListContent(language) {
-  if (language === "typescript") {
-    return `import { useTodos } from '../../hooks/useTodos';
-import { TodoForm } from './TodoForm';
-import { TodoItem } from './TodoItem';
-
-export function TodoList() {
-  const { todos, addTodo, toggleTodo, deleteTodo } = useTodos();
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">My Todos</h1>
-        <TodoForm onAdd={addTodo} />
-        <div className="flex flex-col gap-2">
-          {todos.length === 0 && (
-            <p className="text-center text-gray-400 py-8">No tasks yet. Add one above!</p>
-          )}
-          {todos.map(todo => (
-            <TodoItem key={todo.id} todo={todo} onToggle={toggleTodo} onDelete={deleteTodo} />
-          ))}
-        </div>
-        {todos.length > 0 && (
-          <p className="text-center text-sm text-gray-400 mt-4">
-            {todos.filter(t => t.completed).length}/{todos.length} completed
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-`;
-  }
-  return `import { useTodos } from '../../hooks/useTodos';
-import { TodoForm } from './TodoForm';
-import { TodoItem } from './TodoItem';
-
-export function TodoList() {
-  const { todos, addTodo, toggleTodo, deleteTodo } = useTodos();
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">My Todos</h1>
-        <TodoForm onAdd={addTodo} />
-        <div className="flex flex-col gap-2">
-          {todos.length === 0 && (
-            <p className="text-center text-gray-400 py-8">No tasks yet. Add one above!</p>
-          )}
-          {todos.map(todo => (
-            <TodoItem key={todo.id} todo={todo} onToggle={toggleTodo} onDelete={deleteTodo} />
-          ))}
-        </div>
-        {todos.length > 0 && (
-          <p className="text-center text-sm text-gray-400 mt-4">
-            {todos.filter(t => t.completed).length}/{todos.length} completed
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-`;
-}
-function getTodoIndexContent(language) {
-  return `export { TodoList } from './TodoList';
-export { TodoForm } from './TodoForm';
-export { TodoItem } from './TodoItem';
-`;
-}
-function getAppContent(language) {
-  if (language === "typescript") {
-    return `import { TodoList } from './features/todo';
-
-function App() {
-  return <TodoList />;
-}
-
-export default App;
-`;
-  }
-  return `import { TodoList } from './features/todo';
-
-function App() {
-  return <TodoList />;
-}
-
-export default App;
-`;
-}
-function getNextPageContent(language) {
-  if (language === "typescript") {
-    return `import { TodoList } from '@/components/TodoList';
-
-export default function Home() {
-  return (
-    <main>
-      <TodoList />
-    </main>
-  );
-}
-`;
-  }
-  return `import { TodoList } from '@/components/TodoList';
-
-export default function Home() {
-  return (
-    <main>
-      <TodoList />
-    </main>
-  );
-}
-`;
-}
-function getTailwindConfig(framework, language) {
-  const isTs = language === "typescript";
-  const contentPaths = framework === "react-vite" ? `['./src/**/*.{js,jsx,ts,tsx}', './index.html']` : `['./src/**/*.{js,jsx,ts,tsx}', './app/**/*.{js,jsx,ts,tsx}']`;
-  if (isTs) {
-    return `import type { Config } from 'tailwindcss';
-
-const config: Config = {
-  content: ${contentPaths},
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-};
-
-export default config;
-`;
-  }
-  return `/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ${contentPaths},
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-};
-`;
-}
-function getPostcssConfig() {
-  return `export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-};
-`;
-}
-function getTailwindCSS() {
-  return `@tailwind base;
-@tailwind components;
-@tailwind utilities;
-`;
-}
-
-// src/core/postprocessor.ts
-var FEATURE_DIRS = [
-  "features/todo",
-  "components/atoms",
-  "components/molecules",
-  "components/organisms",
-  "hooks",
-  "lib",
-  "types"
-];
-async function runPostProcessing(config) {
-  await injectFolderStructure(config);
-  await setupTailwind(config);
-  await injectTodoApp(config);
-}
-async function injectFolderStructure(config) {
-  stepHeader(2, "Injecting folder structure");
-  const spinner = createSpinner("Creating directories...");
-  spinner.start();
-  try {
-    const srcPath = import_path2.default.join(config.targetPath, "src");
-    for (const dir of FEATURE_DIRS) {
-      const fullPath = import_path2.default.join(srcPath, dir);
-      await import_promises.default.mkdir(fullPath, { recursive: true });
-      await import_promises.default.writeFile(import_path2.default.join(fullPath, ".gitkeep"), "");
-    }
-    stopSpinner(spinner, "succeed", "Folder structure created");
-  } catch (err) {
-    stopSpinner(spinner, "fail", "Folder structure creation failed");
-    throw err;
-  }
-}
-async function spawnInstall(pm, args, cwd) {
-  return new Promise((resolve, reject) => {
-    const child = (0, import_child_process3.spawn)(pm, args, { cwd, stdio: "pipe", shell: true });
-    child.on("exit", (code) => code === 0 ? resolve() : reject(new Error(`${pm} ${args.join(" ")} exited with code ${code}`)));
-    child.on("error", (err) => reject(err));
-  });
-}
-async function setupTailwind(config) {
-  stepHeader(3, "Setting up Tailwind CSS");
-  const { targetPath, packageManager, framework, language } = config;
-  const installSpinner = createSpinner("Installing tailwindcss postcss autoprefixer...");
-  installSpinner.start();
-  try {
-    await spawnInstall(packageManager, ["install", "-D", "tailwindcss", "postcss", "autoprefixer"], targetPath);
-    stopSpinner(installSpinner, "succeed", "Tailwind dependencies installed");
-  } catch (err) {
-    stopSpinner(installSpinner, "warn", "Tailwind install failed \u2014 skipping");
-    logWarning(`Run manually: cd ${config.projectName} && ${packageManager} install -D tailwindcss postcss autoprefixer`);
-    return;
-  }
-  const configSpinner = createSpinner("Writing Tailwind config files...");
-  configSpinner.start();
-  try {
-    const tailwindExt = language === "typescript" ? "ts" : "js";
-    await import_promises.default.writeFile(
-      import_path2.default.join(targetPath, `tailwind.config.${tailwindExt}`),
-      getTailwindConfig(framework, language)
-    );
-    await import_promises.default.writeFile(import_path2.default.join(targetPath, "postcss.config.js"), getPostcssConfig());
-    if (framework === "react-vite") {
-      await import_promises.default.writeFile(import_path2.default.join(targetPath, "src", "index.css"), getTailwindCSS());
-    } else if (framework === "nextjs") {
-      await import_promises.default.writeFile(import_path2.default.join(targetPath, "app", "globals.css"), getTailwindCSS());
-    }
-    stopSpinner(configSpinner, "succeed", "Tailwind configured");
-  } catch (err) {
-    stopSpinner(configSpinner, "fail", "Tailwind config write failed");
-    throw err;
-  }
-}
-async function injectTodoApp(config) {
-  const { targetPath, framework, language } = config;
-  const ext = language === "typescript" ? "ts" : "js";
-  const jsx = language === "typescript" ? "tsx" : "jsx";
-  const srcPath = import_path2.default.join(targetPath, "src");
-  const spinner = createSpinner("Injecting Todo application...");
-  spinner.start();
-  try {
-    await import_promises.default.writeFile(import_path2.default.join(srcPath, "types", `todo.${ext}`), getTodoTypeContent(language));
-    await import_promises.default.writeFile(import_path2.default.join(srcPath, "hooks", `useTodos.${ext}`), getUseTodosContent(language));
-    await import_promises.default.writeFile(import_path2.default.join(srcPath, "features", "todo", `TodoItem.${jsx}`), getTodoItemContent(language));
-    await import_promises.default.writeFile(import_path2.default.join(srcPath, "features", "todo", `TodoForm.${jsx}`), getTodoFormContent(language));
-    await import_promises.default.writeFile(import_path2.default.join(srcPath, "features", "todo", `TodoList.${jsx}`), getTodoListContent(language));
-    await import_promises.default.writeFile(import_path2.default.join(srcPath, "features", "todo", `index.${ext}`), getTodoIndexContent(language));
-    if (framework === "react-vite") {
-      await import_promises.default.writeFile(import_path2.default.join(srcPath, `App.${jsx}`), getAppContent(language));
-      await import_promises.default.unlink(import_path2.default.join(srcPath, "App.css")).catch(() => void 0);
-      await import_promises.default.unlink(import_path2.default.join(srcPath, "assets", "react.svg")).catch(() => void 0);
-    } else if (framework === "nextjs") {
-      await import_promises.default.writeFile(import_path2.default.join(targetPath, "app", `page.${jsx}`), getNextPageContent(language));
-      const componentsDir = import_path2.default.join(targetPath, "components");
-      await import_promises.default.mkdir(componentsDir, { recursive: true });
-      await import_promises.default.writeFile(import_path2.default.join(componentsDir, `TodoList.${jsx}`), getNextjsTodoListContent(language));
-    }
-    stopSpinner(spinner, "succeed", "Todo application injected");
-  } catch (err) {
-    stopSpinner(spinner, "fail", "Todo injection failed");
-    throw err;
-  }
-}
-function getNextjsTodoListContent(language) {
-  if (language === "typescript") {
-    return `'use client';
-import { useState } from 'react';
-
-interface Todo {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-
-export function TodoList() {
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [value, setValue] = useState('');
-
-  const addTodo = (title: string) => {
-    if (!title.trim()) return;
-    setTodos(prev => [...prev, { id: Date.now().toString(), title: title.trim(), completed: false }]);
-  };
-
-  const toggleTodo = (id: string) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
-
-  const deleteTodo = (id: string) => {
-    setTodos(prev => prev.filter(t => t.id !== id));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    addTodo(value);
-    setValue('');
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">My Todos</h1>
-        <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
-          <input
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            placeholder="Add a new task..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <button type="submit" className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">
-            Add
-          </button>
-        </form>
-        <div className="flex flex-col gap-2">
-          {todos.length === 0 && (
-            <p className="text-center text-gray-400 py-8">No tasks yet. Add one above!</p>
-          )}
-          {todos.map(todo => (
-            <div key={todo.id} className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-100">
-              <input type="checkbox" checked={todo.completed} onChange={() => toggleTodo(todo.id)} className="w-4 h-4 accent-blue-500 cursor-pointer" />
-              <span className={\`flex-1 text-gray-800 \${todo.completed ? 'line-through text-gray-400' : ''}\`}>{todo.title}</span>
-              <button onClick={() => deleteTodo(todo.id)} className="text-red-400 hover:text-red-600 text-sm font-medium transition-colors">Delete</button>
-            </div>
-          ))}
-        </div>
-        {todos.length > 0 && (
-          <p className="text-center text-sm text-gray-400 mt-4">
-            {todos.filter(t => t.completed).length}/{todos.length} completed
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-`;
-  }
-  return `'use client';
-import { useState } from 'react';
-
-export function TodoList() {
-  const [todos, setTodos] = useState([]);
-  const [value, setValue] = useState('');
-
-  const addTodo = (title) => {
-    if (!title.trim()) return;
-    setTodos(prev => [...prev, { id: Date.now().toString(), title: title.trim(), completed: false }]);
-  };
-
-  const toggleTodo = (id) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
-
-  const deleteTodo = (id) => {
-    setTodos(prev => prev.filter(t => t.id !== id));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    addTodo(value);
-    setValue('');
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">My Todos</h1>
-        <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
-          <input
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            placeholder="Add a new task..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <button type="submit" className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">
-            Add
-          </button>
-        </form>
-        <div className="flex flex-col gap-2">
-          {todos.length === 0 && (
-            <p className="text-center text-gray-400 py-8">No tasks yet. Add one above!</p>
-          )}
-          {todos.map(todo => (
-            <div key={todo.id} className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-100">
-              <input type="checkbox" checked={todo.completed} onChange={() => toggleTodo(todo.id)} className="w-4 h-4 accent-blue-500 cursor-pointer" />
-              <span className={\`flex-1 text-gray-800 \${todo.completed ? 'line-through text-gray-400' : ''}\`}>{todo.title}</span>
-              <button onClick={() => deleteTodo(todo.id)} className="text-red-400 hover:text-red-600 text-sm font-medium transition-colors">Delete</button>
-            </div>
-          ))}
-        </div>
-        {todos.length > 0 && (
-          <p className="text-center text-sm text-gray-400 mt-4">
-            {todos.filter(t => t.completed).length}/{todos.length} completed
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-`;
-}
-
 // src/core/generator.ts
 async function validateTemplate(templatePath) {
   try {
@@ -1011,13 +378,13 @@ async function validateTemplate(templatePath) {
   } catch {
     throw new Error(`Template directory not found: ${templatePath}`);
   }
-  const packageJsonPath = path4.join(templatePath, "package.json");
+  const packageJsonPath2 = path3.join(templatePath, "package.json");
   try {
-    await import_fs2.promises.access(packageJsonPath);
+    await import_fs2.promises.access(packageJsonPath2);
   } catch {
     throw new Error(`Missing required file: package.json in ${templatePath}`);
   }
-  const readmePath = path4.join(templatePath, "README.md");
+  const readmePath = path3.join(templatePath, "README.md");
   try {
     await import_fs2.promises.access(readmePath);
   } catch {
@@ -1025,62 +392,65 @@ async function validateTemplate(templatePath) {
   }
 }
 async function generateProject(config) {
-  const targetPath = path4.join(process.cwd(), config.projectName);
   stepHeader(1, "Scaffolding project...");
   if (config.type === "delegate") {
-    try {
-      await runOfficialCLI(config.command, config.args);
-    } catch (err) {
-      throw err;
-    }
-  } else if (config.type === "template") {
+    await runOfficialCLI(config.command, config.args);
+  } else {
     const spinner = createSpinner("Copying template...");
     spinner.start();
     try {
       await validateTemplate(config.templatePath);
-      await copyTemplate(config.templatePath, targetPath);
-      await replacePlaceholders(targetPath, config.projectName);
-      await createEnvFile(targetPath);
+      await copyTemplate(config.templatePath, config.targetPath);
+      await replacePlaceholders(config.targetPath, config.projectName);
+      await createEnvFile(config.targetPath);
       spinner.succeed("Template copied");
     } catch (err) {
       spinner.fail("Template copy failed");
       throw err;
     }
   }
-  if (config.projectType === "frontend") {
-    stepHeader(2, "Enhancing project structure");
-    await runPostProcessing(config);
-  }
-  if (config.type === "template") {
-    stepHeader(3, "Installing dependencies");
-    const installSpinner = createSpinner("Installing...");
-    installSpinner.start();
-    try {
-      await installDependencies(targetPath, config.packageManager);
-      installSpinner.succeed("Dependencies installed");
-    } catch (err) {
-      installSpinner.warn("Dependency installation failed");
-      logWarning(
-        `Failed to install dependencies. You can install them manually:
+  stepHeader(2, "Installing dependencies");
+  const installSpinner = createSpinner("Installing...");
+  installSpinner.start();
+  try {
+    await installDependencies(config.targetPath, config.packageManager);
+    installSpinner.succeed("Dependencies installed");
+  } catch (err) {
+    installSpinner.warn("Dependency installation failed");
+    logWarning(
+      `Failed to install dependencies. Run manually:
   cd ${config.projectName} && ${config.packageManager} install`
-      );
-    }
-    stepHeader(4, "Initializing git repository");
-    const gitSpinner = createSpinner("Initializing git...");
-    gitSpinner.start();
-    try {
-      await initGit(targetPath);
-      gitSpinner.succeed("Git initialized with initial commit");
-    } catch (err) {
-      gitSpinner.warn("Git initialization failed");
-      logWarning("Git initialization failed \u2014 you can run it manually");
-    }
+    );
+  }
+  stepHeader(3, "Initializing git repository");
+  const gitSpinner = createSpinner("Initializing git...");
+  gitSpinner.start();
+  try {
+    await initGit(config.targetPath);
+    gitSpinner.succeed("Git initialized with initial commit");
+  } catch (err) {
+    gitSpinner.warn("Git initialization failed");
+    logWarning("Git initialization failed \u2014 you can run it manually");
   }
   displayNextSteps(config);
 }
+function displayNextSteps(config) {
+  const { projectName, packageManager, framework } = config;
+  logSuccess(`Project "${projectName}" is ready!
+`);
+  logInfo("What to do next:\n");
+  if (framework === "mern") {
+    logInfo(`  cd ${projectName}/server && ${packageManager} run dev`);
+    logInfo(`  cd ${projectName}/client && ${packageManager} run dev`);
+  } else {
+    logInfo(`  cd ${projectName}`);
+    logInfo(`  ${packageManager} run dev`);
+  }
+  logInfo("");
+}
 function runOfficialCLI(command, args) {
   return new Promise((resolve, reject) => {
-    const child = (0, import_child_process4.spawn)(command, args, {
+    const child = (0, import_child_process3.spawn)(command, args, {
       stdio: "inherit",
       shell: true
     });
@@ -1109,18 +479,24 @@ async function createApp() {
     } else {
       subAnswers = await runFullstackPrompts();
     }
-    stepHeader(3, "Database");
-    const { database } = await import_inquirer5.default.prompt([
-      {
-        type: "list",
-        name: "database",
-        message: "Which database?",
-        choices: [
-          { name: "MongoDB (recommended)", value: "mongodb" }
-        ]
-      }
-    ]);
-    stepHeader(4, "Project Name");
+    let database = "mongodb";
+    if (projectType !== "frontend") {
+      stepHeader(3, "Database");
+      const dbAnswer = await import_inquirer5.default.prompt([
+        {
+          type: "list",
+          name: "database",
+          message: "Which database?",
+          choices: [
+            { name: "MongoDB (recommended)", value: "mongodb" }
+          ]
+        }
+      ]);
+      database = dbAnswer.database;
+    }
+    const nameStep = projectType !== "frontend" ? 4 : 3;
+    const pmStep = projectType !== "frontend" ? 5 : 4;
+    stepHeader(nameStep, "Project Name");
     const { projectName } = await import_inquirer5.default.prompt([
       {
         type: "input",
@@ -1129,7 +505,7 @@ async function createApp() {
         validate: validateProjectName
       }
     ]);
-    stepHeader(5, "Package Manager");
+    stepHeader(pmStep, "Package Manager");
     const { packageManager } = await import_inquirer5.default.prompt([
       {
         type: "list",
@@ -1142,18 +518,20 @@ async function createApp() {
         ]
       }
     ]);
+    const targetPath = path4.join(process.cwd(), projectName);
     const answers = {
       projectType,
       framework: subAnswers.framework,
       language: subAnswers.language,
       database,
       projectName,
-      packageManager
+      packageManager,
+      targetPath
     };
     if (!isPackageManagerAvailable(packageManager)) {
       logWarning(`${packageManager} is not installed on this machine. Falling back to npm.`);
+      answers.packageManager = "npm";
     }
-    const targetPath = path5.join(process.cwd(), answers.projectName);
     try {
       await import_fs3.promises.access(targetPath);
       const { action } = await import_inquirer5.default.prompt([
@@ -1178,13 +556,19 @@ async function createApp() {
     const config = resolveConfig(answers);
     await generateProject(config);
   } catch (err) {
-    logError(err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    logError(message);
     process.exit(1);
   }
 }
 
 // src/index.ts
+var path5 = __toESM(require("path"));
+var fs4 = __toESM(require("fs"));
+var packageJsonPath = path5.join(__dirname, "..", "package.json");
+var pkg = JSON.parse(fs4.readFileSync(packageJsonPath, "utf8"));
 var program = new import_commander.Command();
-program.name("create-app").version("1.0.0").description("Scaffold a new project instantly");
+program.name("create-app").version(pkg.version).description("Scaffold a new project instantly");
 program.command("create", { isDefault: true }).description("Create a new project").action(createApp);
 program.parse(process.argv);
+//# sourceMappingURL=index.js.map

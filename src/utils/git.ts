@@ -43,7 +43,6 @@ function runGitCommand(
     const child = spawn(cmd, args, {
       cwd,
       stdio: 'pipe',
-      shell: true,
     });
 
     let stderr = '';

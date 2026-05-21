@@ -51,21 +51,18 @@ describe('git module', () => {
       expect(mockSpawn).toHaveBeenNthCalledWith(1, 'git', ['init'], {
         cwd: targetPath,
         stdio: 'pipe',
-        shell: true,
       });
 
       // Verify git add .
       expect(mockSpawn).toHaveBeenNthCalledWith(2, 'git', ['add', '.'], {
         cwd: targetPath,
         stdio: 'pipe',
-        shell: true,
       });
 
       // Verify git commit
       expect(mockSpawn).toHaveBeenNthCalledWith(3, 'git', ['commit', '-m', 'Initial commit from create-app'], {
         cwd: targetPath,
         stdio: 'pipe',
-        shell: true,
       });
     });
 

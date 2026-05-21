@@ -1,3 +1,4 @@
+// cli.test.ts — Unit tests for the main CLI orchestration flow
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createApp } from '../../src/cli.js';
 import * as mainPrompt from '../../src/prompts/main.prompt.js';
@@ -29,9 +30,13 @@ vi.mock('../../src/prompts/backend.prompt.js');
 vi.mock('../../src/prompts/fullstack.prompt.js');
 vi.mock('../../src/core/resolver.js');
 vi.mock('../../src/core/generator.js');
+vi.mock('../../src/utils/install.js', () => ({
+  isPackageManagerAvailable: vi.fn(() => true),
+}));
 vi.mock('../../src/utils/logger.js', () => ({
   logInfo: vi.fn(),
   logError: vi.fn(),
+  logWarning: vi.fn(),
   stepHeader: vi.fn(),
 }));
 
@@ -59,24 +64,30 @@ describe('cli.ts - createApp', () => {
       type: 'delegate' as const,
       projectName: 'my-app',
       packageManager: 'npm' as const,
-      framework: 'react-vite',
+      framework: 'react-vite' as const,
       command: 'npm',
       args: ['create', 'vite@latest', 'my-app', '--', '--template', 'react-ts'],
+      targetPath: expect.stringContaining('my-app'),
+      projectType: 'frontend' as const,
+      language: 'typescript' as const,
+      database: 'mongodb' as const,
     };
-    vi.mocked(resolver.resolveConfig).mockReturnValue(mockConfig);
+    vi.mocked(resolver.resolveConfig).mockReturnValue(mockConfig as any);
     vi.mocked(generator.generateProject).mockResolvedValue(undefined);
 
     await createApp();
 
     expect(mainPrompt.runMainPrompt).toHaveBeenCalledTimes(1);
     expect(frontendPrompt.runFrontendPrompts).toHaveBeenCalledTimes(1);
-    expect(resolver.resolveConfig).toHaveBeenCalledWith({
+    expect(resolver.resolveConfig).toHaveBeenCalledWith(expect.objectContaining({
       projectType: 'frontend',
       framework: 'react-vite',
       language: 'typescript',
+      database: 'mongodb',
       projectName: 'my-app',
       packageManager: 'npm',
-    });
+      targetPath: expect.stringContaining('my-app'),
+    }));
     expect(generator.generateProject).toHaveBeenCalledWith(mockConfig);
   });
 
@@ -88,6 +99,7 @@ describe('cli.ts - createApp', () => {
     });
     
     vi.mocked(inquirer.prompt)
+      .mockResolvedValueOnce({ database: 'mongodb' })
       .mockResolvedValueOnce({ projectName: 'backend-app' })
       .mockResolvedValueOnce({ packageManager: 'yarn' });
 
@@ -97,24 +109,30 @@ describe('cli.ts - createApp', () => {
       type: 'template' as const,
       projectName: 'backend-app',
       packageManager: 'yarn' as const,
-      framework: 'express',
+      framework: 'express' as const,
       templateName: 'express-ts',
       templatePath: '/path/to/templates/express-ts',
+      targetPath: expect.stringContaining('backend-app'),
+      projectType: 'backend' as const,
+      language: 'typescript' as const,
+      database: 'mongodb' as const,
     };
-    vi.mocked(resolver.resolveConfig).mockReturnValue(mockConfig);
+    vi.mocked(resolver.resolveConfig).mockReturnValue(mockConfig as any);
     vi.mocked(generator.generateProject).mockResolvedValue(undefined);
 
     await createApp();
 
     expect(mainPrompt.runMainPrompt).toHaveBeenCalledTimes(1);
     expect(backendPrompt.runBackendPrompts).toHaveBeenCalledTimes(1);
-    expect(resolver.resolveConfig).toHaveBeenCalledWith({
+    expect(resolver.resolveConfig).toHaveBeenCalledWith(expect.objectContaining({
       projectType: 'backend',
       framework: 'express',
       language: 'typescript',
+      database: 'mongodb',
       projectName: 'backend-app',
       packageManager: 'yarn',
-    });
+      targetPath: expect.stringContaining('backend-app'),
+    }));
     expect(generator.generateProject).toHaveBeenCalledWith(mockConfig);
   });
 
@@ -126,6 +144,7 @@ describe('cli.ts - createApp', () => {
     });
     
     vi.mocked(inquirer.prompt)
+      .mockResolvedValueOnce({ database: 'mongodb' })
       .mockResolvedValueOnce({ projectName: 'fullstack-app' })
       .mockResolvedValueOnce({ packageManager: 'pnpm' });
 
@@ -135,24 +154,30 @@ describe('cli.ts - createApp', () => {
       type: 'template' as const,
       projectName: 'fullstack-app',
       packageManager: 'pnpm' as const,
-      framework: 'mern',
+      framework: 'mern' as const,
       templateName: 'mern-js',
       templatePath: '/path/to/templates/mern-js',
+      targetPath: expect.stringContaining('fullstack-app'),
+      projectType: 'fullstack' as const,
+      language: 'javascript' as const,
+      database: 'mongodb' as const,
     };
-    vi.mocked(resolver.resolveConfig).mockReturnValue(mockConfig);
+    vi.mocked(resolver.resolveConfig).mockReturnValue(mockConfig as any);
     vi.mocked(generator.generateProject).mockResolvedValue(undefined);
 
     await createApp();
 
     expect(mainPrompt.runMainPrompt).toHaveBeenCalledTimes(1);
     expect(fullstackPrompt.runFullstackPrompts).toHaveBeenCalledTimes(1);
-    expect(resolver.resolveConfig).toHaveBeenCalledWith({
+    expect(resolver.resolveConfig).toHaveBeenCalledWith(expect.objectContaining({
       projectType: 'fullstack',
       framework: 'mern',
       language: 'javascript',
+      database: 'mongodb',
       projectName: 'fullstack-app',
       packageManager: 'pnpm',
-    });
+      targetPath: expect.stringContaining('fullstack-app'),
+    }));
     expect(generator.generateProject).toHaveBeenCalledWith(mockConfig);
   });
 
@@ -176,11 +201,15 @@ describe('cli.ts - createApp', () => {
       type: 'delegate' as const,
       projectName: 'existing-app',
       packageManager: 'npm' as const,
-      framework: 'nextjs',
+      framework: 'nextjs' as const,
       command: 'npx',
       args: ['create-next-app@latest', 'existing-app', '--typescript', '--eslint', '--no-git', '--use-npm'],
+      targetPath: expect.stringContaining('existing-app'),
+      projectType: 'frontend' as const,
+      language: 'typescript' as const,
+      database: 'mongodb' as const,
     };
-    vi.mocked(resolver.resolveConfig).mockReturnValue(mockConfig);
+    vi.mocked(resolver.resolveConfig).mockReturnValue(mockConfig as any);
     vi.mocked(generator.generateProject).mockResolvedValue(undefined);
 
     await createApp();

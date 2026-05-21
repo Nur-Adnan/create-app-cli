@@ -1,100 +1,118 @@
+// resilience.property.test.ts — Property tests: generator resilience against install/git failures
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fc from 'fast-check';
+import { generateProject } from '../../src/core/generator.js';
+import type { TemplateConfig } from '../../src/core/resolver.js';
 
-// Note: This test file is prepared for the generator module which will be implemented in Task 8.1
-// Once the generator module exists at src/core/generator.ts, uncomment the import below:
-// import { generateProject } from '../../src/core/generator.js';
+// Mock all generator dependencies
+vi.mock('child_process', () => ({
+  spawn: vi.fn(),
+}));
+
+vi.mock('../../src/utils/copy.js', () => ({
+  copyTemplate: vi.fn().mockResolvedValue(undefined),
+  replacePlaceholders: vi.fn().mockResolvedValue(undefined),
+  createEnvFile: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../src/utils/install.js', () => ({
+  installDependencies: vi.fn(),
+}));
+
+vi.mock('../../src/utils/git.js', () => ({
+  initGit: vi.fn(),
+}));
+
+vi.mock('../../src/utils/logger.js', () => ({
+  stepHeader: vi.fn(),
+  createSpinner: vi.fn(() => ({
+    start: vi.fn(),
+    succeed: vi.fn(),
+    fail: vi.fn(),
+    warn: vi.fn(),
+  })),
+  logWarning: vi.fn(),
+  logSuccess: vi.fn(),
+  logInfo: vi.fn(),
+}));
+
+vi.mock('fs', () => ({
+  promises: {
+    access: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+import { installDependencies } from '../../src/utils/install.js';
+import { initGit } from '../../src/utils/git.js';
+import { logSuccess } from '../../src/utils/logger.js';
 
 describe('Resilience - Property-Based Tests', () => {
+  let mockInstallDependencies: ReturnType<typeof vi.fn>;
+  let mockInitGit: ReturnType<typeof vi.fn>;
+  let mockLogSuccess: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockInstallDependencies = installDependencies as unknown as ReturnType<typeof vi.fn>;
+    mockInitGit = initGit as unknown as ReturnType<typeof vi.fn>;
+    mockLogSuccess = logSuccess as unknown as ReturnType<typeof vi.fn>;
   });
+
+  // Generator for template configs with varying package managers
+  const templateConfigArbitrary = fc.constantFrom('npm', 'yarn', 'pnpm').map(
+    (pm): TemplateConfig => ({
+      type: 'template',
+      projectName: 'test-project',
+      packageManager: pm as 'npm' | 'yarn' | 'pnpm',
+      framework: 'express',
+      language: 'typescript',
+      database: 'mongodb',
+      targetPath: '/path/to/test-project',
+      templateName: 'express-ts',
+      templatePath: '/templates/express-ts',
+    })
+  );
 
   // Feature: create-app-cli, Property 7: Install failure does not abort git init
   // **Validates: Requirements 7.6**
-  it.skip('Property 7: Install failure is non-fatal - generator still calls initGit after install failure', async () => {
-    // TODO: Uncomment and complete once generator module is implemented in Task 8.1
-    
-    // This test will verify that when installDependencies fails, the generator
-    // continues to call initGit rather than aborting the entire process.
-    
-    // Test strategy:
-    // 1. Mock installDependencies to always reject with an error
-    // 2. Mock initGit to track if it was called
-    // 3. Call generateProject with a valid config
-    // 4. Assert that initGit was called despite install failure
-    
-    // Example implementation structure:
-    /*
-    const { installDependencies } = await import('../../src/utils/install.js');
-    const { initGit } = await import('../../src/utils/git.js');
-    
-    vi.spyOn(installDependencies, 'installDependencies').mockRejectedValue(
-      new Error('npm install failed')
-    );
-    
-    const initGitSpy = vi.spyOn(initGit, 'initGit').mockResolvedValue();
-    
-    const configArbitrary = fc.record({
-      type: fc.constant('template' as const),
-      projectName: fc.constant('test-project'),
-      packageManager: fc.constantFrom('npm', 'yarn', 'pnpm'),
-      framework: fc.constant('express'),
-      templateName: fc.constant('express-ts'),
-      templatePath: fc.constant('/path/to/template'),
-    });
-    
+  it('Property 7: Install failure is non-fatal - generator still calls initGit after install failure', async () => {
     await fc.assert(
-      fc.asyncProperty(configArbitrary, async (config) => {
+      fc.asyncProperty(templateConfigArbitrary, async (config) => {
+        vi.clearAllMocks();
+
+        // Mock install to always fail
+        mockInstallDependencies.mockRejectedValue(new Error('install failed'));
+        // Mock git to succeed
+        mockInitGit.mockResolvedValue(undefined);
+
         await generateProject(config);
-        expect(initGitSpy).toHaveBeenCalled();
+
+        // initGit must still have been called despite install failure
+        expect(mockInitGit).toHaveBeenCalledWith(config.targetPath);
       }),
-      { numRuns: 50 }
+      { numRuns: 20 }
     );
-    */
   });
 
   // Feature: create-app-cli, Property 8: Git failure does not abort next steps display
   // **Validates: Requirements 8.5**
-  it.skip('Property 8: Git failure is non-fatal - displayNextSteps is still called after git failure', async () => {
-    // TODO: Uncomment and complete once generator module is implemented in Task 8.1
-    
-    // This test will verify that when initGit fails, the generator
-    // continues to call displayNextSteps rather than aborting.
-    
-    // Test strategy:
-    // 1. Mock initGit to always reject with an error
-    // 2. Mock displayNextSteps to track if it was called
-    // 3. Call generateProject with a valid config
-    // 4. Assert that displayNextSteps was called despite git failure
-    
-    // Example implementation structure:
-    /*
-    const { initGit } = await import('../../src/utils/git.js');
-    const { displayNextSteps } = await import('../../src/utils/logger.js');
-    
-    vi.spyOn(initGit, 'initGit').mockRejectedValue(
-      new Error('git init failed')
-    );
-    
-    const displayNextStepsSpy = vi.spyOn(logger, 'displayNextSteps').mockReturnValue();
-    
-    const configArbitrary = fc.record({
-      type: fc.constant('template' as const),
-      projectName: fc.constant('test-project'),
-      packageManager: fc.constantFrom('npm', 'yarn', 'pnpm'),
-      framework: fc.constant('express'),
-      templateName: fc.constant('express-ts'),
-      templatePath: fc.constant('/path/to/template'),
-    });
-    
+  it('Property 8: Git failure is non-fatal - displayNextSteps is still called after git failure', async () => {
     await fc.assert(
-      fc.asyncProperty(configArbitrary, async (config) => {
+      fc.asyncProperty(templateConfigArbitrary, async (config) => {
+        vi.clearAllMocks();
+
+        // Mock install to succeed, git to fail
+        mockInstallDependencies.mockResolvedValue(undefined);
+        mockInitGit.mockRejectedValue(new Error('git init failed'));
+
         await generateProject(config);
-        expect(displayNextStepsSpy).toHaveBeenCalled();
+
+        // logSuccess (called by displayNextSteps) must still fire
+        expect(mockLogSuccess).toHaveBeenCalledWith(
+          expect.stringContaining(config.projectName)
+        );
       }),
-      { numRuns: 50 }
+      { numRuns: 20 }
     );
-    */
   });
 });

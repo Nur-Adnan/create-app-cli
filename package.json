@@ -2,6 +2,16 @@
   "name": "create-app",
   "version": "1.0.0",
   "description": "Scaffold a new project instantly",
+  "author": "Nur-Adnan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nur-Adnan/npm-package.git"
+  },
+  "homepage": "https://github.com/Nur-Adnan/npm-package#readme",
+  "bugs": {
+    "url": "https://github.com/Nur-Adnan/npm-package/issues"
+  },
   "bin": {
     "create-app": "./dist/index.js"
   },
@@ -9,22 +19,26 @@
     "dist",
     "templates"
   ],
+  "sideEffects": false,
   "engines": {
     "node": ">=18"
   },
   "scripts": {
     "build": "tsup",
-    "dev": "ts-node src/index.ts",
-    "test": "vitest"
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "cli",
     "scaffold",
     "generator",
-    "template"
+    "template",
+    "create-app",
+    "project-generator",
+    "boilerplate"
   ],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
@@ -34,9 +48,9 @@
   "devDependencies": {
     "@types/inquirer": "^9.0.9",
     "@types/node": "^20.14.15",
+    "@vitest/coverage-v8": "^2.0.5",
     "fast-check": "^3.21.0",
     "memfs": "^4.11.1",
-    "ts-node": "^10.9.2",
     "tsup": "^8.2.4",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5"
