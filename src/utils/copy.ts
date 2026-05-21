@@ -1,5 +1,4 @@
 import { promises as fs } from 'fs';
-import * as fsSync from 'fs';
 import * as path from 'path';
 
 /**
@@ -51,7 +50,9 @@ export async function createEnvFile(targetPath: string): Promise<void> {
   const envPath = path.join(targetPath, '.env');
 
   // Check if .env.example exists
-  if (!fsSync.existsSync(envExamplePath)) {
+  try {
+    await fs.access(envExamplePath);
+  } catch {
     return;
   }
 

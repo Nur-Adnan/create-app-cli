@@ -1,11 +1,6 @@
-import { describe, it, expect } from 'vitest';
+// resolver.test.ts — Unit tests for the prompt-to-config resolver
+import { describe, it, expect, vi } from 'vitest';
 import { resolveConfig, PromptAnswers } from '../../src/core/resolver.js';
-import path from 'path';
-import { vi } from 'vitest';
-
-vi.mock('../../src/utils/install.js', () => ({
-  resolveAvailablePackageManager: vi.fn((pm) => pm),
-}));
 
 describe('resolveConfig', () => {
   describe('Frontend - React Vite', () => {
@@ -14,8 +9,10 @@ describe('resolveConfig', () => {
         projectType: 'frontend',
         framework: 'react-vite',
         language: 'typescript',
+        database: 'mongodb',
         projectName: 'my-app',
         packageManager: 'npm',
+        targetPath: '/test/my-app',
       };
 
       const config = resolveConfig(answers);
@@ -24,16 +21,18 @@ describe('resolveConfig', () => {
       expect(config.projectName).toBe('my-app');
       expect(config.packageManager).toBe('npm');
       expect(config.framework).toBe('react-vite');
-      expect(config.command).toBe('npm');
-      expect(config.args).toEqual([
-        'create',
-        'vite@latest',
-        'my-app',
-        '--yes',
-        '--',
-        '--template',
-        'react-ts',
-      ]);
+      if (config.type === 'delegate') {
+        expect(config.command).toBe('npm');
+        expect(config.args).toEqual([
+          'create',
+          'vite@latest',
+          'my-app',
+          '--yes',
+          '--',
+          '--template',
+          'react-ts',
+        ]);
+      }
     });
 
     it('should resolve React Vite with JavaScript to delegate with react template', () => {
@@ -41,8 +40,10 @@ describe('resolveConfig', () => {
         projectType: 'frontend',
         framework: 'react-vite',
         language: 'javascript',
+        database: 'mongodb',
         projectName: 'my-app',
         packageManager: 'npm',
+        targetPath: '/test/my-app',
       };
 
       const config = resolveConfig(answers);
@@ -51,16 +52,18 @@ describe('resolveConfig', () => {
       expect(config.projectName).toBe('my-app');
       expect(config.packageManager).toBe('npm');
       expect(config.framework).toBe('react-vite');
-      expect(config.command).toBe('npm');
-      expect(config.args).toEqual([
-        'create',
-        'vite@latest',
-        'my-app',
-        '--yes',
-        '--',
-        '--template',
-        'react',
-      ]);
+      if (config.type === 'delegate') {
+        expect(config.command).toBe('npm');
+        expect(config.args).toEqual([
+          'create',
+          'vite@latest',
+          'my-app',
+          '--yes',
+          '--',
+          '--template',
+          'react',
+        ]);
+      }
     });
   });
 
@@ -70,8 +73,10 @@ describe('resolveConfig', () => {
         projectType: 'frontend',
         framework: 'nextjs',
         language: 'typescript',
+        database: 'mongodb',
         projectName: 'my-next-app',
         packageManager: 'npm',
+        targetPath: '/test/my-next-app',
       };
 
       const config = resolveConfig(answers);
@@ -80,13 +85,15 @@ describe('resolveConfig', () => {
       expect(config.projectName).toBe('my-next-app');
       expect(config.packageManager).toBe('npm');
       expect(config.framework).toBe('nextjs');
-      expect(config.command).toBe('npx');
-      expect(config.args).toContain('create-next-app@latest');
-      expect(config.args).toContain('my-next-app');
-      expect(config.args).toContain('--typescript');
-      expect(config.args).toContain('--eslint');
-      expect(config.args).toContain('--no-git');
-      expect(config.args).toContain('--use-npm');
+      if (config.type === 'delegate') {
+        expect(config.command).toBe('npx');
+        expect(config.args).toContain('create-next-app@latest');
+        expect(config.args).toContain('my-next-app');
+        expect(config.args).toContain('--typescript');
+        expect(config.args).toContain('--eslint');
+        expect(config.args).toContain('--no-git');
+        expect(config.args).toContain('--use-npm');
+      }
     });
 
     it('should resolve Next.js with JavaScript and npm', () => {
@@ -94,18 +101,22 @@ describe('resolveConfig', () => {
         projectType: 'frontend',
         framework: 'nextjs',
         language: 'javascript',
+        database: 'mongodb',
         projectName: 'my-next-app',
         packageManager: 'npm',
+        targetPath: '/test/my-next-app',
       };
 
       const config = resolveConfig(answers);
 
       expect(config.type).toBe('delegate');
-      expect(config.command).toBe('npx');
-      expect(config.args).toContain('--no-typescript');
-      expect(config.args).toContain('--eslint');
-      expect(config.args).toContain('--no-git');
-      expect(config.args).toContain('--use-npm');
+      if (config.type === 'delegate') {
+        expect(config.command).toBe('npx');
+        expect(config.args).toContain('--no-typescript');
+        expect(config.args).toContain('--eslint');
+        expect(config.args).toContain('--no-git');
+        expect(config.args).toContain('--use-npm');
+      }
     });
 
     it('should resolve Next.js with TypeScript and pnpm with correct flags', () => {
@@ -113,19 +124,23 @@ describe('resolveConfig', () => {
         projectType: 'frontend',
         framework: 'nextjs',
         language: 'typescript',
+        database: 'mongodb',
         projectName: 'pnpm-app',
         packageManager: 'pnpm',
+        targetPath: '/test/pnpm-app',
       };
 
       const config = resolveConfig(answers);
 
       expect(config.type).toBe('delegate');
       expect(config.packageManager).toBe('pnpm');
-      expect(config.command).toBe('npx');
-      expect(config.args).toContain('--use-pnpm');
-      expect(config.args).toContain('--no-git');
-      expect(config.args).not.toContain('--use-npm');
-      expect(config.args).not.toContain('--use-yarn');
+      if (config.type === 'delegate') {
+        expect(config.command).toBe('npx');
+        expect(config.args).toContain('--use-pnpm');
+        expect(config.args).toContain('--no-git');
+        expect(config.args).not.toContain('--use-npm');
+        expect(config.args).not.toContain('--use-yarn');
+      }
     });
 
     it('should resolve Next.js with yarn package manager', () => {
@@ -133,17 +148,21 @@ describe('resolveConfig', () => {
         projectType: 'frontend',
         framework: 'nextjs',
         language: 'typescript',
+        database: 'mongodb',
         projectName: 'yarn-app',
         packageManager: 'yarn',
+        targetPath: '/test/yarn-app',
       };
 
       const config = resolveConfig(answers);
 
       expect(config.type).toBe('delegate');
       expect(config.packageManager).toBe('yarn');
-      expect(config.args).toContain('--use-yarn');
-      expect(config.args).not.toContain('--use-npm');
-      expect(config.args).not.toContain('--use-pnpm');
+      if (config.type === 'delegate') {
+        expect(config.args).toContain('--use-yarn');
+        expect(config.args).not.toContain('--use-npm');
+        expect(config.args).not.toContain('--use-pnpm');
+      }
     });
   });
 
@@ -153,8 +172,10 @@ describe('resolveConfig', () => {
         projectType: 'backend',
         framework: 'express',
         language: 'typescript',
+        database: 'mongodb',
         projectName: 'express-api',
         packageManager: 'npm',
+        targetPath: '/test/express-api',
       };
 
       const config = resolveConfig(answers);
@@ -163,12 +184,12 @@ describe('resolveConfig', () => {
       expect(config.projectName).toBe('express-api');
       expect(config.packageManager).toBe('npm');
       expect(config.framework).toBe('express');
-      expect(config.templateName).toBe('express-ts');
-      expect(config.templatePath).toBeDefined();
-      expect(config.templatePath).toContain('templates');
-      expect(config.templatePath).toContain('express-ts');
-      expect(config.command).toBeUndefined();
-      expect(config.args).toBeUndefined();
+      if (config.type === 'template') {
+        expect(config.templateName).toBe('express-ts');
+        expect(config.templatePath).toBeDefined();
+        expect(config.templatePath).toContain('templates');
+        expect(config.templatePath).toContain('express-ts');
+      }
     });
 
     it('should resolve Express with JavaScript to template', () => {
@@ -176,15 +197,19 @@ describe('resolveConfig', () => {
         projectType: 'backend',
         framework: 'express',
         language: 'javascript',
+        database: 'mongodb',
         projectName: 'express-api',
         packageManager: 'npm',
+        targetPath: '/test/express-api',
       };
 
       const config = resolveConfig(answers);
 
       expect(config.type).toBe('template');
-      expect(config.templateName).toBe('express-js');
-      expect(config.templatePath).toContain('express-js');
+      if (config.type === 'template') {
+        expect(config.templateName).toBe('express-js');
+        expect(config.templatePath).toContain('express-js');
+      }
     });
   });
 
@@ -194,8 +219,10 @@ describe('resolveConfig', () => {
         projectType: 'fullstack',
         framework: 'mern',
         language: 'typescript',
+        database: 'mongodb',
         projectName: 'mern-app',
         packageManager: 'npm',
+        targetPath: '/test/mern-app',
       };
 
       const config = resolveConfig(answers);
@@ -204,10 +231,10 @@ describe('resolveConfig', () => {
       expect(config.projectName).toBe('mern-app');
       expect(config.packageManager).toBe('npm');
       expect(config.framework).toBe('mern');
-      expect(config.templateName).toBe('mern-ts');
-      expect(config.templatePath).toContain('mern-ts');
-      expect(config.command).toBeUndefined();
-      expect(config.args).toBeUndefined();
+      if (config.type === 'template') {
+        expect(config.templateName).toBe('mern-ts');
+        expect(config.templatePath).toContain('mern-ts');
+      }
     });
 
     it('should resolve MERN with JavaScript to template', () => {
@@ -215,15 +242,19 @@ describe('resolveConfig', () => {
         projectType: 'fullstack',
         framework: 'mern',
         language: 'javascript',
+        database: 'mongodb',
         projectName: 'mern-app',
         packageManager: 'npm',
+        targetPath: '/test/mern-app',
       };
 
       const config = resolveConfig(answers);
 
       expect(config.type).toBe('template');
-      expect(config.templateName).toBe('mern-js');
-      expect(config.templatePath).toContain('mern-js');
+      if (config.type === 'template') {
+        expect(config.templateName).toBe('mern-js');
+        expect(config.templatePath).toContain('mern-js');
+      }
     });
   });
 
@@ -233,8 +264,10 @@ describe('resolveConfig', () => {
         projectType: 'fullstack',
         framework: 'next-fullstack',
         language: 'typescript',
+        database: 'mongodb',
         projectName: 'next-fullstack-app',
         packageManager: 'npm',
+        targetPath: '/test/next-fullstack-app',
       };
 
       const config = resolveConfig(answers);
@@ -243,8 +276,10 @@ describe('resolveConfig', () => {
       expect(config.projectName).toBe('next-fullstack-app');
       expect(config.packageManager).toBe('npm');
       expect(config.framework).toBe('next-fullstack');
-      expect(config.templateName).toBe('next-fullstack-ts');
-      expect(config.templatePath).toContain('next-fullstack-ts');
+      if (config.type === 'template') {
+        expect(config.templateName).toBe('next-fullstack-ts');
+        expect(config.templatePath).toContain('next-fullstack-ts');
+      }
     });
 
     it('should resolve Next.js Full Stack with JavaScript to template', () => {
@@ -252,15 +287,19 @@ describe('resolveConfig', () => {
         projectType: 'fullstack',
         framework: 'next-fullstack',
         language: 'javascript',
+        database: 'mongodb',
         projectName: 'next-fullstack-app',
         packageManager: 'npm',
+        targetPath: '/test/next-fullstack-app',
       };
 
       const config = resolveConfig(answers);
 
       expect(config.type).toBe('template');
-      expect(config.templateName).toBe('next-fullstack-js');
-      expect(config.templatePath).toContain('next-fullstack-js');
+      if (config.type === 'template') {
+        expect(config.templateName).toBe('next-fullstack-js');
+        expect(config.templatePath).toContain('next-fullstack-js');
+      }
     });
   });
 
@@ -270,16 +309,35 @@ describe('resolveConfig', () => {
         projectType: 'backend',
         framework: 'express',
         language: 'typescript',
+        database: 'mongodb',
         projectName: 'test-app',
         packageManager: 'npm',
+        targetPath: '/test/test-app',
       };
 
       const config = resolveConfig(answers);
 
       // Template path should be constructed using path.join and contain the template name
-      expect(config.templatePath).toBeDefined();
-      expect(config.templatePath).toContain('templates');
-      expect(config.templatePath).toContain('express-ts');
+      if (config.type === 'template') {
+        expect(config.templatePath).toBeDefined();
+        expect(config.templatePath).toContain('templates');
+        expect(config.templatePath).toContain('express-ts');
+      }
+    });
+
+    it('should use the provided targetPath instead of computing it', () => {
+      const answers: PromptAnswers = {
+        projectType: 'backend',
+        framework: 'express',
+        language: 'typescript',
+        database: 'mongodb',
+        projectName: 'test-app',
+        packageManager: 'npm',
+        targetPath: '/custom/path/test-app',
+      };
+
+      const config = resolveConfig(answers);
+      expect(config.targetPath).toBe('/custom/path/test-app');
     });
   });
 
@@ -289,8 +347,10 @@ describe('resolveConfig', () => {
         projectType: 'frontend',
         framework: 'unsupported-framework' as any,
         language: 'typescript',
+        database: 'mongodb',
         projectName: 'test-app',
         packageManager: 'npm',
+        targetPath: '/test/test-app',
       };
 
       expect(() => resolveConfig(answers)).toThrow('Unsupported configuration');

@@ -40,6 +40,9 @@ var import_ora = __toESM(require("ora"));
 function logInfo(message) {
   console.log(import_chalk.default.blue("\u2139 " + message));
 }
+function logSuccess(message) {
+  console.log(import_chalk.default.green("\u2714 " + message));
+}
 function logWarning(message) {
   console.log(import_chalk.default.yellow("\u26A0 " + message));
 }
@@ -51,21 +54,6 @@ function stepHeader(n, message) {
 }
 function createSpinner(text) {
   return (0, import_ora.default)(text);
-}
-function displayNextSteps(config) {
-  const { projectName, packageManager, framework } = config;
-  console.log(import_chalk.default.bold.green(`
-\u2714  Project "${projectName}" is ready!
-`));
-  console.log(import_chalk.default.bold("What to do next:\n"));
-  if (framework === "mern") {
-    console.log(import_chalk.default.cyan(`  cd ${projectName}/server && ${packageManager} run dev`));
-    console.log(import_chalk.default.cyan(`  cd ${projectName}/client && ${packageManager} run dev`));
-  } else {
-    console.log(import_chalk.default.cyan(`  cd ${projectName}`));
-    console.log(import_chalk.default.cyan(`  ${packageManager} run dev`));
-  }
-  console.log();
 }
 
 // src/prompts/main.prompt.ts
@@ -191,13 +179,12 @@ function validateProjectName(name) {
 // src/core/resolver.ts
 var import_path = __toESM(require("path"));
 function resolveConfig(answers) {
-  const { projectType, framework, language, database, projectName, packageManager } = answers;
-  const targetPath = import_path.default.join(process.cwd(), projectName);
+  const { projectType, framework, language, database, projectName, packageManager, targetPath } = answers;
   if (projectType === "frontend") {
     if (framework === "react-vite") {
-      const templateName = language === "typescript" ? "react-vite-ts" : "react-vite-js";
+      const template = language === "typescript" ? "react-ts" : "react";
       return {
-        type: "template",
+        type: "delegate",
         projectType,
         projectName,
         packageManager,
@@ -205,14 +192,27 @@ function resolveConfig(answers) {
         language,
         database,
         targetPath,
-        templateName,
-        templatePath: import_path.default.join(__dirname, "..", "..", "templates", templateName)
+        command: "npm",
+        args: ["create", "vite@latest", projectName, "--yes", "--", "--template", template]
       };
     }
     if (framework === "nextjs") {
-      const templateName = language === "typescript" ? "next-frontend-ts" : "next-frontend-js";
+      const args = [
+        "create-next-app@latest",
+        projectName,
+        language === "typescript" ? "--typescript" : "--no-typescript",
+        "--eslint",
+        "--no-git"
+      ];
+      if (packageManager === "yarn") {
+        args.push("--use-yarn");
+      } else if (packageManager === "pnpm") {
+        args.push("--use-pnpm");
+      } else {
+        args.push("--use-npm");
+      }
       return {
-        type: "template",
+        type: "delegate",
         projectType,
         projectName,
         packageManager,
@@ -220,8 +220,8 @@ function resolveConfig(answers) {
         language,
         database,
         targetPath,
-        templateName,
-        templatePath: import_path.default.join(__dirname, "..", "..", "templates", templateName)
+        command: "npx",
+        args
       };
     }
   }
@@ -282,16 +282,15 @@ var path3 = __toESM(require("path"));
 
 // src/utils/copy.ts
 var import_fs = require("fs");
-var fsSync = __toESM(require("fs"));
 var path2 = __toESM(require("path"));
 async function copyTemplate(templatePath, targetPath) {
   await import_fs.promises.cp(templatePath, targetPath, { recursive: true });
 }
 async function replacePlaceholders(targetPath, projectName) {
-  const packageJsonPath = path2.join(targetPath, "package.json");
-  const packageJsonContent = await import_fs.promises.readFile(packageJsonPath, { encoding: "utf8" });
+  const packageJsonPath2 = path2.join(targetPath, "package.json");
+  const packageJsonContent = await import_fs.promises.readFile(packageJsonPath2, { encoding: "utf8" });
   const updatedPackageJson = packageJsonContent.replace(/PROJECT_NAME/g, projectName);
-  await import_fs.promises.writeFile(packageJsonPath, updatedPackageJson, { encoding: "utf8" });
+  await import_fs.promises.writeFile(packageJsonPath2, updatedPackageJson, { encoding: "utf8" });
   const readmePath = path2.join(targetPath, "README.md");
   const readmeContent = await import_fs.promises.readFile(readmePath, { encoding: "utf8" });
   const updatedReadme = readmeContent.replace(/PROJECT_NAME/g, projectName);
@@ -300,7 +299,9 @@ async function replacePlaceholders(targetPath, projectName) {
 async function createEnvFile(targetPath) {
   const envExamplePath = path2.join(targetPath, ".env.example");
   const envPath = path2.join(targetPath, ".env");
-  if (!fsSync.existsSync(envExamplePath)) {
+  try {
+    await import_fs.promises.access(envExamplePath);
+  } catch {
     return;
   }
   await import_fs.promises.copyFile(envExamplePath, envPath);
@@ -310,7 +311,7 @@ async function createEnvFile(targetPath) {
 var import_child_process = require("child_process");
 function isPackageManagerAvailable(pm) {
   try {
-    (0, import_child_process.execSync)(`${pm} --version`, { stdio: "ignore" });
+    (0, import_child_process.execFileSync)(pm, ["--version"], { stdio: "ignore" });
     return true;
   } catch {
     return false;
@@ -318,17 +319,9 @@ function isPackageManagerAvailable(pm) {
 }
 async function installDependencies(targetPath, packageManager) {
   return new Promise((resolve, reject) => {
-    const commands = {
-      npm: "npm install",
-      yarn: "yarn install",
-      pnpm: "pnpm install"
-    };
-    const command = commands[packageManager];
-    const [cmd, ...args] = command.split(" ");
-    const child = (0, import_child_process.spawn)(cmd, args, {
+    const child = (0, import_child_process.spawn)(packageManager, ["install"], {
       cwd: targetPath,
-      stdio: "inherit",
-      shell: true
+      stdio: "inherit"
     });
     child.on("exit", (code) => {
       if (code === 0) {
@@ -359,8 +352,7 @@ function runGitCommand(cmd, args, cwd, description) {
   return new Promise((resolve, reject) => {
     const child = (0, import_child_process2.spawn)(cmd, args, {
       cwd,
-      stdio: "pipe",
-      shell: true
+      stdio: "pipe"
     });
     let stderr = "";
     child.stderr?.on("data", (data) => {
@@ -386,9 +378,9 @@ async function validateTemplate(templatePath) {
   } catch {
     throw new Error(`Template directory not found: ${templatePath}`);
   }
-  const packageJsonPath = path3.join(templatePath, "package.json");
+  const packageJsonPath2 = path3.join(templatePath, "package.json");
   try {
-    await import_fs2.promises.access(packageJsonPath);
+    await import_fs2.promises.access(packageJsonPath2);
   } catch {
     throw new Error(`Missing required file: package.json in ${templatePath}`);
   }
@@ -402,12 +394,8 @@ async function validateTemplate(templatePath) {
 async function generateProject(config) {
   stepHeader(1, "Scaffolding project...");
   if (config.type === "delegate") {
-    try {
-      await runOfficialCLI(config.command, config.args);
-    } catch (err) {
-      throw err;
-    }
-  } else if (config.type === "template") {
+    await runOfficialCLI(config.command, config.args);
+  } else {
     const spinner = createSpinner("Copying template...");
     spinner.start();
     try {
@@ -445,6 +433,20 @@ async function generateProject(config) {
     logWarning("Git initialization failed \u2014 you can run it manually");
   }
   displayNextSteps(config);
+}
+function displayNextSteps(config) {
+  const { projectName, packageManager, framework } = config;
+  logSuccess(`Project "${projectName}" is ready!
+`);
+  logInfo("What to do next:\n");
+  if (framework === "mern") {
+    logInfo(`  cd ${projectName}/server && ${packageManager} run dev`);
+    logInfo(`  cd ${projectName}/client && ${packageManager} run dev`);
+  } else {
+    logInfo(`  cd ${projectName}`);
+    logInfo(`  ${packageManager} run dev`);
+  }
+  logInfo("");
 }
 function runOfficialCLI(command, args) {
   return new Promise((resolve, reject) => {
@@ -516,18 +518,20 @@ async function createApp() {
         ]
       }
     ]);
+    const targetPath = path4.join(process.cwd(), projectName);
     const answers = {
       projectType,
       framework: subAnswers.framework,
       language: subAnswers.language,
       database,
       projectName,
-      packageManager
+      packageManager,
+      targetPath
     };
     if (!isPackageManagerAvailable(packageManager)) {
       logWarning(`${packageManager} is not installed on this machine. Falling back to npm.`);
+      answers.packageManager = "npm";
     }
-    const targetPath = path4.join(process.cwd(), answers.projectName);
     try {
       await import_fs3.promises.access(targetPath);
       const { action } = await import_inquirer5.default.prompt([
@@ -552,13 +556,19 @@ async function createApp() {
     const config = resolveConfig(answers);
     await generateProject(config);
   } catch (err) {
-    logError(err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    logError(message);
     process.exit(1);
   }
 }
 
 // src/index.ts
+var path5 = __toESM(require("path"));
+var fs4 = __toESM(require("fs"));
+var packageJsonPath = path5.join(__dirname, "..", "package.json");
+var pkg = JSON.parse(fs4.readFileSync(packageJsonPath, "utf8"));
 var program = new import_commander.Command();
-program.name("create-app").version("1.0.0").description("Scaffold a new project instantly");
+program.name("create-app").version(pkg.version).description("Scaffold a new project instantly");
 program.command("create", { isDefault: true }).description("Create a new project").action(createApp);
 program.parse(process.argv);
+//# sourceMappingURL=index.js.map

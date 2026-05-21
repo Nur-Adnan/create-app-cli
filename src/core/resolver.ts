@@ -1,43 +1,66 @@
+// resolver.ts — Maps raw prompt answers to a concrete, type-safe scaffolding configuration
 import path from 'path';
-import { resolveAvailablePackageManager } from '../utils/install';
 
+/** All supported framework identifiers across project types. */
+export type Framework = 'react-vite' | 'nextjs' | 'express' | 'mern' | 'next-fullstack';
+
+/** Validated answers collected from the interactive prompt flow. */
 export interface PromptAnswers {
   projectType: 'frontend' | 'backend' | 'fullstack';
-  framework: string;
+  framework: Framework;
   language: 'typescript' | 'javascript';
   database: 'mongodb';
   projectName: string;
   packageManager: 'npm' | 'yarn' | 'pnpm';
+  targetPath: string;
 }
 
-export interface ResolvedConfig {
-  type: 'delegate' | 'template';
+/** Shared fields present on every resolved config variant. */
+interface BaseConfig {
   projectType: 'frontend' | 'backend' | 'fullstack';
   projectName: string;
   packageManager: 'npm' | 'yarn' | 'pnpm';
-  framework: string;
+  framework: Framework;
   language: 'typescript' | 'javascript';
   database: 'mongodb';
   targetPath: string;
-  command?: string;
-  args?: string[];
-  templateName?: string;
-  templatePath?: string;
 }
 
+/** Config for projects scaffolded by delegating to an official CLI (e.g. create-vite, create-next-app). */
+export interface DelegateConfig extends BaseConfig {
+  type: 'delegate';
+  command: string;
+  args: string[];
+}
+
+/** Config for projects scaffolded by copying an internal template directory. */
+export interface TemplateConfig extends BaseConfig {
+  type: 'template';
+  templateName: string;
+  templatePath: string;
+}
+
+/** Discriminated union of all scaffolding strategies. */
+export type ResolvedConfig = DelegateConfig | TemplateConfig;
+
+/**
+ * Resolves validated prompt answers into a concrete scaffolding configuration.
+ *
+ * @param answers - Validated prompt answers from the CLI flow
+ * @returns A type-safe configuration object for the generator
+ * @throws Error if the project type + framework combination is unsupported
+ */
 export function resolveConfig(answers: PromptAnswers): ResolvedConfig {
-  const { projectType, framework, language, database, projectName, packageManager } = answers;
-  const targetPath = path.join(process.cwd(), projectName);
+  const { projectType, framework, language, database, projectName, packageManager, targetPath } = answers;
 
   if (projectType === 'frontend') {
     if (framework === 'react-vite') {
-      const resolvedPm = resolveAvailablePackageManager(packageManager);
       const template = language === 'typescript' ? 'react-ts' : 'react';
       return {
         type: 'delegate',
         projectType,
         projectName,
-        packageManager: resolvedPm,
+        packageManager,
         framework,
         language,
         database,
@@ -48,8 +71,6 @@ export function resolveConfig(answers: PromptAnswers): ResolvedConfig {
     }
 
     if (framework === 'nextjs') {
-      const resolvedPm = resolveAvailablePackageManager(packageManager);
-
       const args = [
         'create-next-app@latest',
         projectName,
@@ -58,9 +79,9 @@ export function resolveConfig(answers: PromptAnswers): ResolvedConfig {
         '--no-git',
       ];
 
-      if (resolvedPm === 'yarn') {
+      if (packageManager === 'yarn') {
         args.push('--use-yarn');
-      } else if (resolvedPm === 'pnpm') {
+      } else if (packageManager === 'pnpm') {
         args.push('--use-pnpm');
       } else {
         args.push('--use-npm');
@@ -70,7 +91,7 @@ export function resolveConfig(answers: PromptAnswers): ResolvedConfig {
         type: 'delegate',
         projectType,
         projectName,
-        packageManager: resolvedPm,
+        packageManager,
         framework,
         language,
         database,
