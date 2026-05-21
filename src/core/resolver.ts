@@ -29,37 +29,54 @@ export function resolveConfig(answers: PromptAnswers): ResolvedConfig {
   const { projectType, framework, language, database, projectName, packageManager } = answers;
   const targetPath = path.join(process.cwd(), projectName);
 
-  // Frontend templates
   if (projectType === 'frontend') {
     if (framework === 'react-vite') {
-      const templateName = language === 'typescript' ? 'react-vite-ts' : 'react-vite-js';
+      const resolvedPm = resolveAvailablePackageManager(packageManager);
+      const template = language === 'typescript' ? 'react-ts' : 'react';
       return {
-        type: 'template',
+        type: 'delegate',
         projectType,
         projectName,
-        packageManager,
+        packageManager: resolvedPm,
         framework,
         language,
         database,
         targetPath,
-        templateName,
-        templatePath: path.join(__dirname, '..', '..', 'templates', templateName),
+        command: 'npm',
+        args: ['create', 'vite@latest', projectName, '--yes', '--', '--template', template],
       };
     }
 
     if (framework === 'nextjs') {
-      const templateName = language === 'typescript' ? 'next-frontend-ts' : 'next-frontend-js';
+      const resolvedPm = resolveAvailablePackageManager(packageManager);
+
+      const args = [
+        'create-next-app@latest',
+        projectName,
+        language === 'typescript' ? '--typescript' : '--no-typescript',
+        '--eslint',
+        '--no-git',
+      ];
+
+      if (resolvedPm === 'yarn') {
+        args.push('--use-yarn');
+      } else if (resolvedPm === 'pnpm') {
+        args.push('--use-pnpm');
+      } else {
+        args.push('--use-npm');
+      }
+
       return {
-        type: 'template',
+        type: 'delegate',
         projectType,
         projectName,
-        packageManager,
+        packageManager: resolvedPm,
         framework,
         language,
         database,
         targetPath,
-        templateName,
-        templatePath: path.join(__dirname, '..', '..', 'templates', templateName),
+        command: 'npx',
+        args,
       };
     }
   }

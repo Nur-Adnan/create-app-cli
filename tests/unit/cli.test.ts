@@ -32,6 +32,7 @@ vi.mock('../../src/core/generator.js');
 vi.mock('../../src/utils/logger.js', () => ({
   logInfo: vi.fn(),
   logError: vi.fn(),
+  logWarning: vi.fn(),
   stepHeader: vi.fn(),
 }));
 
@@ -74,6 +75,7 @@ describe('cli.ts - createApp', () => {
       projectType: 'frontend',
       framework: 'react-vite',
       language: 'typescript',
+      database: 'mongodb',
       projectName: 'my-app',
       packageManager: 'npm',
     });
@@ -88,6 +90,7 @@ describe('cli.ts - createApp', () => {
     });
     
     vi.mocked(inquirer.prompt)
+      .mockResolvedValueOnce({ database: 'mongodb' })
       .mockResolvedValueOnce({ projectName: 'backend-app' })
       .mockResolvedValueOnce({ packageManager: 'yarn' });
 
@@ -112,6 +115,7 @@ describe('cli.ts - createApp', () => {
       projectType: 'backend',
       framework: 'express',
       language: 'typescript',
+      database: 'mongodb',
       projectName: 'backend-app',
       packageManager: 'yarn',
     });
@@ -126,6 +130,7 @@ describe('cli.ts - createApp', () => {
     });
     
     vi.mocked(inquirer.prompt)
+      .mockResolvedValueOnce({ database: 'mongodb' })
       .mockResolvedValueOnce({ projectName: 'fullstack-app' })
       .mockResolvedValueOnce({ packageManager: 'pnpm' });
 
@@ -150,6 +155,7 @@ describe('cli.ts - createApp', () => {
       projectType: 'fullstack',
       framework: 'mern',
       language: 'javascript',
+      database: 'mongodb',
       projectName: 'fullstack-app',
       packageManager: 'pnpm',
     });

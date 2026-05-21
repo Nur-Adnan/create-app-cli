@@ -3,7 +3,7 @@ import { generateProject } from '../../src/core/generator.js';
 import { spawn } from 'child_process';
 import type { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
-import type { ResolvedConfig } from '../../src/utils/logger.js';
+import type { ResolvedConfig } from '../../src/core/resolver.js';
 
 // Mock all dependencies
 vi.mock('child_process', () => ({
@@ -113,6 +113,10 @@ describe('generator module', () => {
         framework: 'react-vite-ts',
         command: 'npm',
         args: ['create', 'vite@latest', 'my-vite-app', '--', '--template', 'react-ts'],
+        targetPath: '/path/to/my-vite-app',
+        projectType: 'frontend',
+        language: 'typescript',
+        database: 'mongodb',
       };
 
       // Mock spawn to return a child process that succeeds
@@ -145,6 +149,10 @@ describe('generator module', () => {
         framework: 'next-ts',
         command: 'npx',
         args: ['create-next-app@latest', 'my-next-app', '--typescript'],
+        targetPath: '/path/to/my-next-app',
+        projectType: 'frontend',
+        language: 'typescript',
+        database: 'mongodb',
       };
 
       // Mock spawn to succeed
@@ -173,6 +181,10 @@ describe('generator module', () => {
         framework: 'react-vite-js',
         command: 'pnpm',
         args: ['create', 'vite', 'test-app'],
+        targetPath: '/path/to/test-app',
+        projectType: 'frontend',
+        language: 'javascript',
+        database: 'mongodb',
       };
 
       // Mock spawn to succeed
@@ -202,6 +214,10 @@ describe('generator module', () => {
         framework: 'express-ts',
         templateName: 'express-ts',
         templatePath: '/templates/express-ts',
+        targetPath: '/path/to/my-express-app',
+        projectType: 'backend',
+        language: 'typescript',
+        database: 'mongodb',
       };
 
       // Mock access to succeed for all validation checks
@@ -236,6 +252,10 @@ describe('generator module', () => {
         framework: 'mern-ts',
         templateName: 'mern-ts',
         templatePath: '/templates/mern-ts',
+        targetPath: '/path/to/mern-app',
+        projectType: 'fullstack',
+        language: 'typescript',
+        database: 'mongodb',
       };
 
       // Mock access to succeed for all validation checks
@@ -263,6 +283,10 @@ describe('generator module', () => {
         framework: 'express-js',
         templateName: 'express-js',
         templatePath: '/templates/express-js',
+        targetPath: '/path/to/test-app',
+        projectType: 'backend',
+        language: 'javascript',
+        database: 'mongodb',
       };
 
       // Mock access to succeed for validation
@@ -287,6 +311,10 @@ describe('generator module', () => {
         framework: 'next-js',
         command: 'npx',
         args: ['create-next-app', 'app-with-install-fail'],
+        targetPath: '/path/to/app-with-install-fail',
+        projectType: 'frontend',
+        language: 'javascript',
+        database: 'mongodb',
       };
 
       // Mock spawn to succeed
@@ -319,6 +347,10 @@ describe('generator module', () => {
         framework: 'express-ts',
         templateName: 'express-ts',
         templatePath: '/templates/express-ts',
+        targetPath: '/path/to/git-fail-app',
+        projectType: 'backend',
+        language: 'typescript',
+        database: 'mongodb',
       };
 
       // Mock access to succeed for validation
@@ -343,6 +375,10 @@ describe('generator module', () => {
         framework: 'react-vite-ts',
         command: 'yarn',
         args: ['create', 'vite', 'app-with-git-fail'],
+        targetPath: '/path/to/app-with-git-fail',
+        projectType: 'frontend',
+        language: 'typescript',
+        database: 'mongodb',
       };
 
       // Mock spawn to succeed
@@ -373,6 +409,10 @@ describe('generator module', () => {
         framework: 'express-ts',
         templateName: 'express-ts',
         templatePath: '/templates/nonexistent',
+        targetPath: '/path/to/missing-template-app',
+        projectType: 'backend',
+        language: 'typescript',
+        database: 'mongodb',
       };
 
       // Mock access to fail for template directory
@@ -391,6 +431,10 @@ describe('generator module', () => {
         framework: 'express-js',
         templateName: 'express-js',
         templatePath: '/templates/express-js',
+        targetPath: '/path/to/no-package-json-app',
+        projectType: 'backend',
+        language: 'javascript',
+        database: 'mongodb',
       };
 
       // Mock access to succeed for directory and README, fail for package.json

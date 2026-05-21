@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { resolveConfig, PromptAnswers } from '../../src/core/resolver.js';
 import path from 'path';
+import { vi } from 'vitest';
+
+vi.mock('../../src/utils/install.js', () => ({
+  resolveAvailablePackageManager: vi.fn((pm) => pm),
+}));
 
 describe('resolveConfig', () => {
   describe('Frontend - React Vite', () => {
