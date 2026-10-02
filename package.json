@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nur-Adnan/npm-package.git"
+    "url": "git+https://github.com/Nur-Adnan/create-app-cli.git"
   },
-  "homepage": "https://github.com/Nur-Adnan/npm-package#readme",
+  "homepage": "https://github.com/Nur-Adnan/create-app-cli#readme",
   "bugs": {
-    "url": "https://github.com/Nur-Adnan/npm-package/issues"
+    "url": "https://github.com/Nur-Adnan/create-app-cli/issues"
   },
   "bin": {
     "create-app": "./dist/index.js"
