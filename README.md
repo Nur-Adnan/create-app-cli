@@ -8,14 +8,14 @@
 
 ## Quick Start
 
-```bash
-npx create-app
-```
-
-Or install globally:
+The CLI is not published to npm yet (the `create-app` name on the registry belongs to an unrelated package), so run it from source:
 
 ```bash
-npm install -g create-app
+git clone https://github.com/Nur-Adnan/create-app-cli.git
+cd create-app-cli
+npm install
+npm run build
+npm link        # exposes the `create-app` command locally
 create-app
 ```
 
@@ -180,8 +180,8 @@ my-app/
 
 ```bash
 # Clone and install
-git clone https://github.com/Nur-Adnan/npm-package.git
-cd npm-package
+git clone https://github.com/Nur-Adnan/create-app-cli.git
+cd create-app-cli
 npm install
 
 # Run in dev mode
